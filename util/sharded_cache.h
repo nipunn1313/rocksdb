@@ -24,17 +24,17 @@ class CacheShard {
   virtual ~CacheShard() = default;
 
   virtual Status Insert(const Slice& key, uint32_t hash, void* value,
-                        size_t charge,
+                        uint64_t charge,
                         void (*deleter)(const Slice& key, void* value),
                         Cache::Handle** handle) = 0;
   virtual Cache::Handle* Lookup(const Slice& key, uint32_t hash) = 0;
   virtual void Release(Cache::Handle* handle) = 0;
   virtual void Erase(const Slice& key, uint32_t hash) = 0;
-  virtual void SetCapacity(size_t capacity) = 0;
+  virtual void SetCapacity(uint64_t capacity) = 0;
   virtual void SetStrictCapacityLimit(bool strict_capacity_limit) = 0;
-  virtual size_t GetUsage() const = 0;
-  virtual size_t GetPinnedUsage() const = 0;
-  virtual void ApplyToAllCacheEntries(void (*callback)(void*, size_t),
+  virtual uint64_t GetUsage() const = 0;
+  virtual uint64_t GetPinnedUsage() const = 0;
+  virtual void ApplyToAllCacheEntries(void (*callback)(void*, uint64_t),
                                       bool thread_safe) = 0;
   virtual void EraseUnRefEntries() = 0;
 };
@@ -50,26 +50,26 @@ class ShardedCache : public Cache {
   virtual CacheShard* GetShard(int shard) = 0;
   virtual const CacheShard* GetShard(int shard) const = 0;
   virtual void* Value(Handle* handle) override = 0;
-  virtual size_t GetCharge(Handle* handle) const = 0;
+  virtual uint64_t GetCharge(Handle* handle) const = 0;
   virtual uint32_t GetHash(Handle* handle) const = 0;
   virtual void DisownData() override = 0;
 
-  virtual void SetCapacity(size_t capacity) override;
+  virtual void SetCapacity(uint64_t capacity) override;
   virtual void SetStrictCapacityLimit(bool strict_capacity_limit) override;
 
-  virtual Status Insert(const Slice& key, void* value, size_t charge,
+  virtual Status Insert(const Slice& key, void* value, uint64_t charge,
                         void (*deleter)(const Slice& key, void* value),
                         Handle** handle) override;
   virtual Handle* Lookup(const Slice& key) override;
   virtual void Release(Handle* handle) override;
   virtual void Erase(const Slice& key) override;
   virtual uint64_t NewId() override;
-  virtual size_t GetCapacity() const override;
+  virtual uint64_t GetCapacity() const override;
   virtual bool HasStrictCapacityLimit() const override;
-  virtual size_t GetUsage() const override;
-  virtual size_t GetUsage(Handle* handle) const override;
-  virtual size_t GetPinnedUsage() const override;
-  virtual void ApplyToAllCacheEntries(void (*callback)(void*, size_t),
+  virtual uint64_t GetUsage() const override;
+  virtual uint64_t GetUsage(Handle* handle) const override;
+  virtual uint64_t GetPinnedUsage() const override;
+  virtual void ApplyToAllCacheEntries(void (*callback)(void*, uint64_t),
                                       bool thread_safe) override;
   virtual void EraseUnRefEntries() override;
 
@@ -85,7 +85,7 @@ class ShardedCache : public Cache {
 
   int num_shard_bits_;
   mutable port::Mutex capacity_mutex_;
-  size_t capacity_;
+  uint64_t capacity_;
   bool strict_capacity_limit_;
   std::atomic<uint64_t> last_id_;
 };

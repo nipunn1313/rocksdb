@@ -51,7 +51,7 @@ struct LRUHandle {
   LRUHandle* next_hash;
   LRUHandle* next;
   LRUHandle* prev;
-  size_t charge;  // TODO(opt): Only allow uint32_t?
+  uint64_t charge;
   size_t key_length;
   uint32_t refs;     // a number of refs to this entry
                      // cache itself is counted as 1
@@ -191,14 +191,14 @@ class LRUCacheShard : public CacheShard {
   // Separate from constructor so caller can easily make an array of LRUCache
   // if current usage is more than new capacity, the function will attempt to
   // free the needed space
-  virtual void SetCapacity(size_t capacity) override;
+  virtual void SetCapacity(uint64_t capacity) override;
 
   // Set the flag to reject insertion if cache if full.
   virtual void SetStrictCapacityLimit(bool strict_capacity_limit) override;
 
   // Like Cache methods, but with an extra "hash" parameter.
   virtual Status Insert(const Slice& key, uint32_t hash, void* value,
-                        size_t charge,
+                        uint64_t charge,
                         void (*deleter)(const Slice& key, void* value),
                         Cache::Handle** handle) override;
   virtual Cache::Handle* Lookup(const Slice& key, uint32_t hash) override;
@@ -209,12 +209,12 @@ class LRUCacheShard : public CacheShard {
   // GetUsage() and GetPinnedUsage() work correctly under any platform, we'll
   // protect them with mutex_.
 
-  virtual size_t GetUsage() const override {
+  virtual uint64_t GetUsage() const override {
     MutexLock l(&mutex_);
     return usage_;
   }
 
-  virtual size_t GetPinnedUsage() const override {
+  virtual uint64_t GetPinnedUsage() const override {
     MutexLock l(&mutex_);
     assert(usage_ >= lru_usage_);
     return usage_ - lru_usage_;
@@ -236,16 +236,16 @@ class LRUCacheShard : public CacheShard {
   // to hold (usage_ + charge) is freed or the lru list is empty
   // This function is not thread safe - it needs to be executed while
   // holding the mutex_
-  void EvictFromLRU(size_t charge, autovector<LRUHandle*>* deleted);
+  void EvictFromLRU(uint64_t charge, autovector<LRUHandle*>* deleted);
 
   // Initialized before use.
-  size_t capacity_;
+  uint64_t capacity_;
 
   // Memory size for entries residing in the cache
-  size_t usage_;
+  uint64_t usage_;
 
   // Memory size for entries residing only in the LRU list
-  size_t lru_usage_;
+  uint64_t lru_usage_;
 
   // Whether to reject insertion if cache reaches its full capacity.
   bool strict_capacity_limit_;
@@ -302,7 +302,7 @@ void LRUCacheShard::EraseUnRefEntries() {
   }
 }
 
-void LRUCacheShard::ApplyToAllCacheEntries(void (*callback)(void*, size_t),
+void LRUCacheShard::ApplyToAllCacheEntries(void (*callback)(void*, uint64_t),
                                            bool thread_safe) {
   if (thread_safe) {
     mutex_.Lock();
@@ -334,7 +334,7 @@ void LRUCacheShard::LRU_Append(LRUHandle* e) {
   lru_usage_ += e->charge;
 }
 
-void LRUCacheShard::EvictFromLRU(size_t charge,
+void LRUCacheShard::EvictFromLRU(uint64_t charge,
                                  autovector<LRUHandle*>* deleted) {
   while (usage_ + charge > capacity_ && lru_.next != &lru_) {
     LRUHandle* old = lru_.next;
@@ -349,7 +349,7 @@ void LRUCacheShard::EvictFromLRU(size_t charge,
   }
 }
 
-void LRUCacheShard::SetCapacity(size_t capacity) {
+void LRUCacheShard::SetCapacity(uint64_t capacity) {
   autovector<LRUHandle*> last_reference_list;
   {
     MutexLock l(&mutex_);
@@ -419,7 +419,7 @@ void LRUCacheShard::Release(Cache::Handle* handle) {
 }
 
 Status LRUCacheShard::Insert(const Slice& key, uint32_t hash, void* value,
-                             size_t charge,
+                             uint64_t charge,
                              void (*deleter)(const Slice& key, void* value),
                              Cache::Handle** handle) {
   // Allocate the memory here outside of the mutex
@@ -540,7 +540,7 @@ class LRUCache : public ShardedCache {
     return reinterpret_cast<const LRUHandle*>(handle)->value;
   }
 
-  virtual size_t GetCharge(Handle* handle) const override {
+  virtual uint64_t GetCharge(Handle* handle) const override {
     return reinterpret_cast<const LRUHandle*>(handle)->charge;
   }
 
@@ -556,7 +556,7 @@ class LRUCache : public ShardedCache {
 
 }  // end anonymous namespace
 
-std::shared_ptr<Cache> NewLRUCache(size_t capacity, int num_shard_bits,
+std::shared_ptr<Cache> NewLRUCache(uint64_t capacity, int num_shard_bits,
                                    bool strict_capacity_limit) {
   if (num_shard_bits >= 20) {
     return nullptr;  // the cache cannot be sharded into too many fine pieces

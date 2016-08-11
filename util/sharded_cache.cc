@@ -12,14 +12,14 @@
 
 namespace rocksdb {
 
-ShardedCache::ShardedCache(size_t capacity, int num_shard_bits,
+ShardedCache::ShardedCache(uint64_t capacity, int num_shard_bits,
                            bool strict_capacity_limit)
     : num_shard_bits_(num_shard_bits),
       capacity_(capacity),
       strict_capacity_limit_(strict_capacity_limit),
       last_id_(1) {}
 
-void ShardedCache::SetCapacity(size_t capacity) {
+void ShardedCache::SetCapacity(uint64_t capacity) {
   int num_shards = 1 << num_shard_bits_;
   const size_t per_shard = (capacity + (num_shards - 1)) / num_shards;
   MutexLock l(&capacity_mutex_);
@@ -38,7 +38,7 @@ void ShardedCache::SetStrictCapacityLimit(bool strict_capacity_limit) {
   strict_capacity_limit_ = strict_capacity_limit;
 }
 
-Status ShardedCache::Insert(const Slice& key, void* value, size_t charge,
+Status ShardedCache::Insert(const Slice& key, void* value, uint64_t charge,
                             void (*deleter)(const Slice& key, void* value),
                             Handle** handle) {
   uint32_t hash = HashSlice(key);
@@ -65,7 +65,7 @@ uint64_t ShardedCache::NewId() {
   return last_id_.fetch_add(1, std::memory_order_relaxed);
 }
 
-size_t ShardedCache::GetCapacity() const {
+uint64_t ShardedCache::GetCapacity() const {
   MutexLock l(&capacity_mutex_);
   return capacity_;
 }
@@ -75,31 +75,31 @@ bool ShardedCache::HasStrictCapacityLimit() const {
   return strict_capacity_limit_;
 }
 
-size_t ShardedCache::GetUsage() const {
+uint64_t ShardedCache::GetUsage() const {
   // We will not lock the cache when getting the usage from shards.
   int num_shards = 1 << num_shard_bits_;
-  size_t usage = 0;
+  uint64_t usage = 0;
   for (int s = 0; s < num_shards; s++) {
     usage += GetShard(s)->GetUsage();
   }
   return usage;
 }
 
-size_t ShardedCache::GetUsage(Handle* handle) const {
+uint64_t ShardedCache::GetUsage(Handle* handle) const {
   return GetCharge(handle);
 }
 
-size_t ShardedCache::GetPinnedUsage() const {
+uint64_t ShardedCache::GetPinnedUsage() const {
   // We will not lock the cache when getting the usage from shards.
   int num_shards = 1 << num_shard_bits_;
-  size_t usage = 0;
+  uint64_t usage = 0;
   for (int s = 0; s < num_shards; s++) {
     usage += GetShard(s)->GetPinnedUsage();
   }
   return usage;
 }
 
-void ShardedCache::ApplyToAllCacheEntries(void (*callback)(void*, size_t),
+void ShardedCache::ApplyToAllCacheEntries(void (*callback)(void*, uint64_t),
                                           bool thread_safe) {
   int num_shards = 1 << num_shard_bits_;
   for (int s = 0; s < num_shards; s++) {

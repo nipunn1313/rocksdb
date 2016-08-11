@@ -32,7 +32,7 @@ class SimCacheImpl : public SimCache {
     cache_->SetStrictCapacityLimit(strict_capacity_limit);
   }
 
-  virtual Status Insert(const Slice& key, void* value, size_t charge,
+  virtual Status Insert(const Slice& key, void* value, uint64_t charge,
                         void (*deleter)(const Slice& key, void* value),
                         Handle** handle) override {
     // The handle and value passed in are for real cache, so we pass nullptr
@@ -74,19 +74,19 @@ class SimCacheImpl : public SimCache {
 
   virtual uint64_t NewId() override { return cache_->NewId(); }
 
-  virtual size_t GetCapacity() const override { return cache_->GetCapacity(); }
+  virtual uint64_t GetCapacity() const override { return cache_->GetCapacity(); }
 
   virtual bool HasStrictCapacityLimit() const override {
     return cache_->HasStrictCapacityLimit();
   }
 
-  virtual size_t GetUsage() const override { return cache_->GetUsage(); }
+  virtual uint64_t GetUsage() const override { return cache_->GetUsage(); }
 
-  virtual size_t GetUsage(Handle* handle) const override {
+  virtual uint64_t GetUsage(Handle* handle) const override {
     return cache_->GetUsage(handle);
   }
 
-  virtual size_t GetPinnedUsage() const override {
+  virtual uint64_t GetPinnedUsage() const override {
     return cache_->GetPinnedUsage();
   }
 
@@ -95,7 +95,7 @@ class SimCacheImpl : public SimCache {
     key_only_cache_->DisownData();
   }
 
-  virtual void ApplyToAllCacheEntries(void (*callback)(void*, size_t),
+  virtual void ApplyToAllCacheEntries(void (*callback)(void*, uint64_t),
                                       bool thread_safe) override {
     // only apply to _cache since key_only_cache doesn't hold value
     cache_->ApplyToAllCacheEntries(callback, thread_safe);
@@ -106,13 +106,13 @@ class SimCacheImpl : public SimCache {
     key_only_cache_->EraseUnRefEntries();
   }
 
-  virtual size_t GetSimCapacity() const override {
+  virtual uint64_t GetSimCapacity() const override {
     return key_only_cache_->GetCapacity();
   }
-  virtual size_t GetSimUsage() const override {
+  virtual uint64_t GetSimUsage() const override {
     return key_only_cache_->GetUsage();
   }
-  virtual void SetSimCapacity(size_t capacity) override {
+  virtual void SetSimCapacity(uint64_t capacity) override {
     key_only_cache_->SetCapacity(capacity);
   }
 
@@ -159,7 +159,7 @@ class SimCacheImpl : public SimCache {
 
 // For instrumentation purpose, use NewSimCache instead
 std::shared_ptr<SimCache> NewSimCache(std::shared_ptr<Cache> cache,
-                                      size_t sim_capacity, int num_shard_bits,
+                                      uint64_t sim_capacity, int num_shard_bits,
                                       std::shared_ptr<Statistics> stats) {
   if (num_shard_bits >= 20) {
     return nullptr;  // the cache cannot be sharded into too many fine pieces

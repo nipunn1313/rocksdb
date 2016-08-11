@@ -34,7 +34,7 @@ class Cache;
 // Create a new cache with a fixed size capacity. The cache is sharded
 // to 2^num_shard_bits shards, by hash of the key. The total capacity
 // is divided and evenly assigned to each shard.
-extern std::shared_ptr<Cache> NewLRUCache(size_t capacity,
+extern std::shared_ptr<Cache> NewLRUCache(uint64_t capacity,
                                           int num_shard_bits = 6,
                                           bool strict_capacity_limit = false);
 
@@ -66,7 +66,7 @@ class Cache {
   //
   // When the inserted entry is no longer needed, the key and
   // value will be passed to "deleter".
-  virtual Status Insert(const Slice& key, void* value, size_t charge,
+  virtual Status Insert(const Slice& key, void* value, uint64_t charge,
                         void (*deleter)(const Slice& key, void* value),
                         Handle** handle = nullptr) = 0;
 
@@ -102,7 +102,7 @@ class Cache {
   // capacity is less than the old capacity and the existing usage is
   // greater than new capacity, the implementation will do its best job to
   // purge the released entries from the cache in order to lower the usage
-  virtual void SetCapacity(size_t capacity) = 0;
+  virtual void SetCapacity(uint64_t capacity) = 0;
 
   // Set whether to return error on insertion when cache reaches its full
   // capacity.
@@ -113,16 +113,16 @@ class Cache {
   virtual bool HasStrictCapacityLimit() const = 0;
 
   // returns the maximum configured capacity of the cache
-  virtual size_t GetCapacity() const = 0;
+  virtual uint64_t GetCapacity() const = 0;
 
   // returns the memory size for the entries residing in the cache.
-  virtual size_t GetUsage() const = 0;
+  virtual uint64_t GetUsage() const = 0;
 
   // returns the memory size for a specific entry in the cache.
-  virtual size_t GetUsage(Handle* handle) const = 0;
+  virtual uint64_t GetUsage(Handle* handle) const = 0;
 
   // returns the memory size for the entries in use by the system
-  virtual size_t GetPinnedUsage() const = 0;
+  virtual uint64_t GetPinnedUsage() const = 0;
 
   // Call this on shutdown if you want to speed it up. Cache will disown
   // any underlying data and will not free it on delete. This call will leak
@@ -136,7 +136,7 @@ class Cache {
   // Apply callback to all entries in the cache
   // If thread_safe is true, it will also lock the accesses. Otherwise, it will
   // access the cache without the lock held
-  virtual void ApplyToAllCacheEntries(void (*callback)(void*, size_t),
+  virtual void ApplyToAllCacheEntries(void (*callback)(void*, uint64_t),
                                       bool thread_safe) = 0;
 
   // Remove all entries.

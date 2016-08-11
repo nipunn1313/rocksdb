@@ -24,7 +24,7 @@ class SimCache;
 // can help users tune their current block cache size, and determine how
 // efficient they are using the memory.
 extern std::shared_ptr<SimCache> NewSimCache(
-    std::shared_ptr<Cache> cache, size_t sim_capacity, int num_shard_bits,
+    std::shared_ptr<Cache> cache, uint64_t sim_capacity, int num_shard_bits,
     std::shared_ptr<Statistics> stats = nullptr);
 
 class SimCache : public Cache {
@@ -34,19 +34,19 @@ class SimCache : public Cache {
   virtual ~SimCache() {}
 
   // returns the maximum configured capacity of the simcache for simulation
-  virtual size_t GetSimCapacity() const = 0;
+  virtual uint64_t GetSimCapacity() const = 0;
 
   // simcache doesn't provide internal handler reference to user, so always
   // PinnedUsage = 0 and the behavior will be not exactly consistent the
   // with real cache.
   // returns the memory size for the entries residing in the simcache.
-  virtual size_t GetSimUsage() const = 0;
+  virtual uint64_t GetSimUsage() const = 0;
 
   // sets the maximum configured capacity of the simcache. When the new
   // capacity is less than the old capacity and the existing usage is
   // greater than new capacity, the implementation will purge old entries
   // to fit new capapicty.
-  virtual void SetSimCapacity(size_t capacity) = 0;
+  virtual void SetSimCapacity(uint64_t capacity) = 0;
 
   // returns the lookup times of simcache
   virtual uint64_t get_miss_counter() const = 0;
